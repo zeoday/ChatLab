@@ -41,10 +41,14 @@ mac:
   extendInfo:
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+  target:
+    - dmg
+    - zip
+  artifactName: ChatLab-${version}-${arch}.${ext}
 
 # macOS 平台的 DMG 配置
 dmg:
-  artifactName: ChatLab-${version}.${ext}
+  artifactName: ChatLab-${version}-${arch}.${ext}
 
 # Linux 平台配置
 linux:
