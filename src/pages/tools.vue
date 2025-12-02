@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { SubTabs } from '@/components/UI'
 import MergeTab from '@/components/tools/MergeTab.vue'
 
 // Tab 配置
@@ -17,24 +18,7 @@ const activeTab = ref('merge')
     </div>
 
     <!-- Tabs -->
-    <div class="border-b border-gray-200 bg-white px-6 dark:border-gray-800 dark:bg-gray-900">
-      <div class="flex gap-1">
-        <button
-          v-for="tab in tabs"
-          :key="tab.id"
-          class="flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors"
-          :class="[
-            activeTab === tab.id
-              ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-              : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300',
-          ]"
-          @click="activeTab = tab.id"
-        >
-          <UIcon :name="tab.icon" class="h-4 w-4" />
-          {{ tab.label }}
-        </button>
-      </div>
-    </div>
+    <SubTabs v-model="activeTab" :items="tabs" />
 
     <!-- Tab Content -->
     <div class="flex-1 overflow-auto p-6">
