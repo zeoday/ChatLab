@@ -33,9 +33,8 @@ export function initPerfLog(sessionId: string): void {
     currentLogFile = path.join(logDir, `import_${sessionId}_${Date.now()}.log`)
     // 写入头部
     fs.writeFileSync(currentLogFile, `=== 导入性能日志 ===\n开始时间: ${new Date().toISOString()}\n\n`, 'utf-8')
-    console.log(`[PerfLog] 日志文件: ${currentLogFile}`)
-  } catch (e) {
-    console.error('[PerfLog] 初始化日志文件失败:', e)
+  } catch {
+    // 忽略初始化失败
   }
 }
 
@@ -66,15 +65,12 @@ export function logPerf(event: string, messagesProcessed: number, batchSize?: nu
     (batchSize ? ` | 批次: ${batchSize}` : '') +
     '\n'
 
-  // 控制台输出
-  console.log(`[PerfLog] ${logLine.trim()}`)
-
   // 实时写入文件
   if (currentLogFile) {
     try {
       fs.appendFileSync(currentLogFile, logLine, 'utf-8')
-    } catch (e) {
-      console.error('[PerfLog] 写入日志失败:', e)
+    } catch {
+      // 忽略写入失败
     }
   }
 
@@ -110,3 +106,4 @@ export function resetPerfLog(): void {
 export function getCurrentLogFile(): string | null {
   return currentLogFile
 }
+

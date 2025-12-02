@@ -16,7 +16,9 @@ import {
   type ParsedMeta,
   type ParsedMember,
   type ParsedMessage,
-} from '../parser'
+} from '../../parser'
+import { getDbDir } from '../core'
+import { initPerfLog, logPerf, logPerfDetail, resetPerfLog } from '../core'
 
 /** 流式导入结果 */
 export interface StreamImportResult {
@@ -24,8 +26,6 @@ export interface StreamImportResult {
   sessionId?: string
   error?: string
 }
-import { getDbDir } from './dbCore'
-import { initPerfLog, logPerf, logPerfDetail, resetPerfLog, getCurrentLogFile } from './perfLogger'
 
 // ==================== 临时数据库相关（用于合并功能） ====================
 
@@ -176,16 +176,11 @@ function createDatabaseWithoutIndexes(sessionId: string): Database.Database {
  * 导入完成后创建索引
  */
 function createIndexes(db: Database.Database): void {
-  console.log('[StreamImport] 开始创建索引...')
-  const startTime = Date.now()
-
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_message_ts ON message(ts);
     CREATE INDEX IF NOT EXISTS idx_message_sender ON message(sender_id);
     CREATE INDEX IF NOT EXISTS idx_member_name_history_member_id ON member_name_history(member_id);
   `)
-
-  console.log(`[StreamImport] 索引创建完成，耗时: ${Date.now() - startTime}ms`)
 }
 
 /**
@@ -200,8 +195,6 @@ export async function streamImport(filePath: string, requestId: string): Promise
     return { success: false, error: '无法识别文件格式' }
   }
 
-  console.log(`[StreamImport] 开始导入: ${filePath}, 格式: ${formatFeature.name}`)
-
   // 初始化性能日志（实时写入文件）
   resetPerfLog()
   const sessionId = generateSessionId()
@@ -214,7 +207,6 @@ export async function streamImport(filePath: string, requestId: string): Promise
   const preprocessor = getPreprocessor(filePath)
 
   if (preprocessor && needsPreprocess(filePath)) {
-    console.log(`[StreamImport] 文件需要预处理，开始精简...`)
     sendProgress(requestId, {
       stage: 'parsing',
       bytesRead: 0,
@@ -232,9 +224,7 @@ export async function streamImport(filePath: string, requestId: string): Promise
         })
       })
       actualFilePath = tempFilePath
-      console.log(`[StreamImport] 预处理完成: ${tempFilePath}`)
     } catch (err) {
-      console.error(`[StreamImport] 预处理失败:`, err)
       return {
         success: false,
         error: `预处理失败: ${err instanceof Error ? err.message : String(err)}`,
@@ -297,9 +287,8 @@ export async function streamImport(filePath: string, requestId: string): Promise
   const doCheckpoint = () => {
     try {
       db.pragma('wal_checkpoint(TRUNCATE)')
-      console.log(`[StreamImport] WAL checkpoint 完成，累计 ${totalMessageCount} 条`)
-    } catch (e) {
-      console.warn('[StreamImport] WAL checkpoint 失败:', e)
+    } catch {
+      // 忽略 WAL checkpoint 失败
     }
   }
 
@@ -319,7 +308,6 @@ export async function streamImport(filePath: string, requestId: string): Promise
         lastCheckpointCount = totalMessageCount
       }
 
-      console.log(`[StreamImport] 已提交事务，累计 ${totalMessageCount} 条消息`)
       // 发送写入进度
       sendProgress(requestId, {
         stage: 'importing',
@@ -348,13 +336,10 @@ export async function streamImport(filePath: string, requestId: string): Promise
         if (!metaInserted) {
           insertMeta.run(meta.name, meta.platform, meta.type, Math.floor(Date.now() / 1000))
           metaInserted = true
-          console.log(`[StreamImport] Meta 已写入: ${meta.name}`)
         }
       },
 
       onMembers: (members: ParsedMember[]) => {
-        console.log(`[StreamImport] 收到 ${members.length} 个成员`)
-        let nicknameCount = 0
         for (const member of members) {
           insertMember.run(member.platformId, member.name, member.nickname || null)
           const row = getMemberId.get(member.platformId) as { id: number } | undefined
@@ -364,14 +349,8 @@ export async function streamImport(filePath: string, requestId: string): Promise
           // 存储原始昵称，用于过滤虚假的昵称变更
           if (member.nickname) {
             memberNicknameMap.set(member.platformId, member.nickname)
-            nicknameCount++
-            // 调试日志（前 10 个）
-            if (nicknameCount <= 10) {
-              console.log(`[昵称映射] platformId=${member.platformId}, name="${member.name}", nickname="${member.nickname}"`)
-            }
           }
         }
-        console.log(`[StreamImport] 已存储 ${nicknameCount} 个成员的原始昵称`)
       },
 
       onMessageBatch: (messages: ParsedMessage[]) => {
@@ -442,18 +421,10 @@ export async function streamImport(filePath: string, requestId: string): Promise
                 history: [{ name: senderName, startTs: msg.timestamp }],
               })
               nicknameChangeCount++
-              // 调试日志（前 20 条）
-              if (nicknameChangeCount <= 20) {
-                console.log(`[昵称追踪] 新增: platformId=${msg.senderPlatformId}, name="${senderName}", nickname="${originalNickname}"`)
-              }
             }
           } else if (tracker.currentName !== senderName && isRealNickname) {
             // 昵称变化：只记录变化到真实昵称的情况
             tracker.history.push({ name: senderName, startTs: msg.timestamp })
-            // 调试日志（前 20 条变更）
-            if (tracker.history.length <= 5) {
-              console.log(`[昵称追踪] 变更: platformId=${msg.senderPlatformId}, "${tracker.currentName}" -> "${senderName}", nickname="${originalNickname}"`)
-            }
             tracker.currentName = senderName
             tracker.lastSeenTs = msg.timestamp
             nicknameChangeCount++
@@ -555,7 +526,6 @@ export async function streamImport(filePath: string, requestId: string): Promise
       updateMemberName.run(tracker.currentName, platformId)
     }
     db.exec('COMMIT')
-    console.log(`[StreamImport] 昵称历史：写入 ${historyCount} 条，过滤 ${filteredCount} 个无变更成员`)
     logPerf(`昵称历史写入完成 (${historyCount}条)`, totalMessageCount)
 
     // 创建索引（导入完成后批量创建，比边导入边更新快很多）
@@ -584,7 +554,6 @@ export async function streamImport(filePath: string, requestId: string): Promise
     logPerf('WAL checkpoint 完成', totalMessageCount)
     logPerf('导入完成', totalMessageCount)
 
-    console.log(`[StreamImport] 导入完成: ${sessionId}, 总消息数: ${totalMessageCount}`)
     return { success: true, sessionId }
   } catch (error) {
     // 回滚当前事务
@@ -602,7 +571,6 @@ export async function streamImport(filePath: string, requestId: string): Promise
       fs.unlinkSync(dbPath)
     }
 
-    console.error(`[StreamImport] 导入失败:`, error)
     return {
       success: false,
       error: error instanceof Error ? error.message : String(error),
@@ -613,7 +581,6 @@ export async function streamImport(filePath: string, requestId: string): Promise
     // 清理临时文件
     if (tempFilePath && preprocessor) {
       preprocessor.cleanup(tempFilePath)
-      console.log(`[StreamImport] 已清理临时文件: ${tempFilePath}`)
     }
   }
 }
@@ -718,8 +685,6 @@ export async function streamParseFileInfo(filePath: string, requestId: string): 
     db.exec('COMMIT')
     db.close()
 
-    console.log(`[StreamImport] 已写入临时数据库: ${tempDbPath}, 消息数: ${messageCount}`)
-
     return {
       name: meta.name,
       format: formatFeature.name,
@@ -746,3 +711,4 @@ export async function streamParseFileInfo(filePath: string, requestId: string): 
     throw error
   }
 }
+

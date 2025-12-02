@@ -17,6 +17,7 @@
  */
 
 import * as fs from 'fs'
+import * as path from 'path'
 import { parser } from 'stream-json'
 import { pick } from 'stream-json/filters/Pick'
 import { streamValues } from 'stream-json/streamers/StreamValues'
@@ -33,6 +34,17 @@ import type {
   ParsedMessage,
 } from '../types'
 import { getFileSize, createProgress, readFileHeadBytes, parseTimestamp, isValidYear } from '../utils'
+
+// ==================== 辅助函数 ====================
+
+/**
+ * 从文件名提取群名
+ */
+function extractNameFromFilePath(filePath: string): string {
+  const basename = path.basename(filePath)
+  const name = basename.replace(/\.json$/i, '')
+  return name || '未知群聊'
+}
 
 // ==================== 特征定义 ====================
 
@@ -159,7 +171,7 @@ async function* parseV4(options: ParseOptions): AsyncGenerator<ParseEvent, void,
 
   // 发送 meta
   const meta: ParsedMeta = {
-    name: chatInfo.name,
+    name: chatInfo.name === '未知群聊' ? extractNameFromFilePath(filePath) : chatInfo.name,
     platform: ChatPlatform.QQ,
     type: chatInfo.type === 'group' ? ChatType.GROUP : ChatType.PRIVATE,
   }

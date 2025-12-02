@@ -25,6 +25,20 @@ import type {
   ParsedMessage,
 } from '../types'
 import { getFileSize, createProgress, readFileHeadBytes } from '../utils'
+import * as path from 'path'
+
+// ==================== 辅助函数 ====================
+
+/**
+ * 从文件名提取群名
+ * 返回不含扩展名的文件名
+ */
+function extractNameFromFilePath(filePath: string): string {
+  const basename = path.basename(filePath)
+  // 移除 .json 扩展名
+  const name = basename.replace(/\.json$/i, '')
+  return name || '未知群聊'
+}
 
 // ==================== 特征定义 ====================
 
@@ -80,18 +94,47 @@ async function* parseChatLab(options: ParseOptions): AsyncGenerator<ParseEvent, 
     type: ChatType.GROUP,
   }
   try {
-    const metaMatch = headContent.match(/"meta"\s*:\s*(\{[^}]+\})/)
-    if (metaMatch) {
-      const metaObj = JSON.parse(metaMatch[1])
-      meta = {
-        name: metaObj.name || '未知群聊',
-        platform: (metaObj.platform as ChatPlatform) || ChatPlatform.UNKNOWN,
-        type: (metaObj.type as ChatType) || ChatType.GROUP,
+    // 使用更健壮的方式解析嵌套 JSON 对象
+    // 因为 meta 可能包含 sources 数组（嵌套对象），简单的正则无法正确匹配
+    const metaStartMatch = headContent.match(/"meta"\s*:\s*\{/)
+    if (metaStartMatch && metaStartMatch.index !== undefined) {
+      const startIndex = metaStartMatch.index + metaStartMatch[0].length - 1 // 指向 {
+      let depth = 0
+      let endIndex = startIndex
+
+      // 遍历字符找到匹配的闭合 }
+      for (let i = startIndex; i < headContent.length; i++) {
+        const char = headContent[i]
+        if (char === '{') {
+          depth++
+        } else if (char === '}') {
+          depth--
+          if (depth === 0) {
+            endIndex = i
+            break
+          }
+        }
+      }
+
+      if (endIndex > startIndex) {
+        const metaJson = headContent.slice(startIndex, endIndex + 1)
+        const metaObj = JSON.parse(metaJson)
+        meta = {
+          name: metaObj.name || '未知群聊',
+          platform: (metaObj.platform as ChatPlatform) || ChatPlatform.UNKNOWN,
+          type: (metaObj.type as ChatType) || ChatType.GROUP,
+        }
       }
     }
   } catch {
     // 使用默认值
   }
+
+  // 如果群名仍是默认值，使用文件名作为后备
+  if (meta.name === '未知群聊') {
+    meta.name = extractNameFromFilePath(filePath)
+  }
+
   yield { type: 'meta', data: meta }
 
   // 解析 members（如果在文件开头能找到）

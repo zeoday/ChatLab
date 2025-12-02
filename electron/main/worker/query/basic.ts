@@ -6,7 +6,7 @@
 import Database from 'better-sqlite3'
 import * as fs from 'fs'
 import * as path from 'path'
-import { openDatabase, getDbDir, getDbPath, buildTimeFilter, buildSystemMessageFilter, type TimeFilter } from './dbCore'
+import { openDatabase, getDbDir, getDbPath, buildTimeFilter, buildSystemMessageFilter, type TimeFilter } from '../core'
 
 // ==================== 基础查询 ====================
 
@@ -413,3 +413,4 @@ export function getSession(sessionId: string): any | null {
     dbPath: getDbPath(sessionId),
   }
 }
+

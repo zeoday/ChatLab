@@ -10,7 +10,7 @@
  */
 
 import { parentPort, workerData } from 'worker_threads'
-import { initDbDir, closeDatabase, closeAllDatabases } from './dbCore'
+import { initDbDir, closeDatabase, closeAllDatabases } from './core'
 import {
   getAvailableYears,
   getMemberActivity,
@@ -23,8 +23,6 @@ import {
   getMemberNameHistory,
   getAllSessions,
   getSession,
-} from './queryBasic'
-import {
   getRepeatAnalysis,
   getCatchphraseAnalysis,
   getNightOwlAnalysis,
@@ -35,9 +33,9 @@ import {
   getLaughAnalysis,
   getMemeBattleAnalysis,
   getCheckInAnalysis,
-} from './queryAdvanced'
+} from './query'
 import { parseFile, detectFormat } from '../parser'
-import { streamImport, streamParseFileInfo } from './streamImport'
+import { streamImport, streamParseFileInfo } from './import'
 import type { FileParseInfo } from '../../../src/types/chat'
 
 /**

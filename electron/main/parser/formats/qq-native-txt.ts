@@ -15,6 +15,7 @@
  */
 
 import * as fs from 'fs'
+import * as path from 'path'
 import * as readline from 'readline'
 import { ChatPlatform, ChatType, MessageType } from '../../../../src/types/chat'
 import type {
@@ -28,6 +29,17 @@ import type {
   ParsedMessage,
 } from '../types'
 import { getFileSize, createProgress } from '../utils'
+
+// ==================== 辅助函数 ====================
+
+/**
+ * 从文件名提取群名
+ */
+function extractNameFromFilePath(filePath: string): string {
+  const basename = path.basename(filePath)
+  const name = basename.replace(/\.txt$/i, '')
+  return name || '未知群聊'
+}
 
 // ==================== 特征定义 ====================
 
@@ -226,9 +238,9 @@ async function* parseTxt(options: ParseOptions): AsyncGenerator<ParseEvent, void
   // 保存最后一条消息
   saveCurrentMessage()
 
-  // 发送 meta
+  // 发送 meta（如果群名仍是默认值，使用文件名作为后备）
   const meta: ParsedMeta = {
-    name: groupName,
+    name: groupName === '未知群聊' ? extractNameFromFilePath(filePath) : groupName,
     platform: ChatPlatform.QQ,
     type: ChatType.GROUP,
   }
