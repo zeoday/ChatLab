@@ -1016,17 +1016,23 @@ const mainIpcMain = (win: BrowserWindow) => {
   })
 
   /**
-   * 验证 API Key（支持自定义 baseUrl）
+   * 验证 API Key（支持自定义 baseUrl 和 model）
    */
-  ipcMain.handle('llm:validateApiKey', async (_, provider: llm.LLMProvider, apiKey: string, baseUrl?: string) => {
-    try {
-      const service = llm.createLLMService({ provider, apiKey, baseUrl })
-      return await service.validateApiKey()
-    } catch (error) {
-      console.error('验证 API Key 失败：', error)
-      return false
+  ipcMain.handle(
+    'llm:validateApiKey',
+    async (_, provider: llm.LLMProvider, apiKey: string, baseUrl?: string, model?: string) => {
+      console.log('[LLM:validateApiKey] 开始验证:', { provider, baseUrl, model, apiKeyLength: apiKey?.length })
+      try {
+        const service = llm.createLLMService({ provider, apiKey, baseUrl, model })
+        const result = await service.validateApiKey()
+        console.log('[LLM:validateApiKey] 验证结果:', result)
+        return result
+      } catch (error) {
+        console.error('[LLM:validateApiKey] 验证失败：', error)
+        return false
+      }
     }
-  })
+  )
 
   /**
    * 检查是否已配置 LLM（是否有激活的配置）

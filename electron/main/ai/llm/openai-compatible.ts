@@ -41,6 +41,15 @@ export class OpenAICompatibleService implements ILLMService {
     this.disableThinking = disableThinking ?? true // 默认禁用思考模式
   }
 
+  /**
+   * 设置 Bearer Token 认证头
+   */
+  private setAuthHeaders(headers: Record<string, string>): void {
+    if (this.apiKey && this.apiKey !== 'sk-no-key-required') {
+      headers['Authorization'] = `Bearer ${this.apiKey}`
+    }
+  }
+
   getProvider(): LLMProvider {
     return 'openai-compatible'
   }
@@ -83,11 +92,7 @@ export class OpenAICompatibleService implements ILLMService {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     }
-
-    // 只有在有 API Key 时才添加 Authorization header
-    if (this.apiKey && this.apiKey !== 'sk-no-key-required') {
-      headers['Authorization'] = `Bearer ${this.apiKey}`
-    }
+    this.setAuthHeaders(headers)
 
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
@@ -169,10 +174,7 @@ export class OpenAICompatibleService implements ILLMService {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     }
-
-    if (this.apiKey && this.apiKey !== 'sk-no-key-required') {
-      headers['Authorization'] = `Bearer ${this.apiKey}`
-    }
+    this.setAuthHeaders(headers)
 
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
@@ -291,22 +293,54 @@ export class OpenAICompatibleService implements ILLMService {
   }
 
   async validateApiKey(): Promise<boolean> {
-    try {
-      const headers: Record<string, string> = {}
-      if (this.apiKey && this.apiKey !== 'sk-no-key-required') {
-        headers['Authorization'] = `Bearer ${this.apiKey}`
-      }
+    console.log('[OpenAICompatibleService:validateApiKey] 开始验证:', {
+      baseUrl: this.baseUrl,
+      model: this.model,
+      hasApiKey: !!this.apiKey && this.apiKey !== 'sk-no-key-required',
+    })
 
-      // 尝试调用 models 端点验证连接
-      const response = await fetch(`${this.baseUrl}/models`, {
-        method: 'GET',
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+      this.setAuthHeaders(headers)
+
+      console.log('[OpenAICompatibleService:validateApiKey] 请求头:', Object.keys(headers))
+
+      const url = `${this.baseUrl}/chat/completions`
+      console.log('[OpenAICompatibleService:validateApiKey] 请求 URL:', url)
+
+      // 发送一个简单的测试请求来验证连接和认证
+      const response = await fetch(url, {
+        method: 'POST',
         headers,
+        body: JSON.stringify({
+          model: this.model,
+          messages: [{ role: 'user', content: 'Hi' }],
+          max_tokens: 1,
+        }),
       })
 
-      // 对于本地服务，即使返回 401 也可能是正常的（不需要认证）
-      // 所以我们主要检查服务是否可达
-      return response.ok || response.status === 401
-    } catch {
+      console.log('[OpenAICompatibleService:validateApiKey] 响应状态:', response.status, response.statusText)
+
+      // 200 表示成功，401/403 表示认证失败，其他状态可能是参数问题但服务可达
+      if (response.ok) {
+        return true
+      }
+
+      // 认证失败
+      if (response.status === 401 || response.status === 403) {
+        const text = await response.text()
+        console.log('[OpenAICompatibleService:validateApiKey] 认证失败:', text.slice(0, 500))
+        return false
+      }
+
+      // 其他错误（如 400 参数错误）但服务可达，认为验证通过
+      // 因为这说明认证成功了，只是请求参数有问题
+      console.log('[OpenAICompatibleService:validateApiKey] 服务可达，状态码:', response.status)
+      return true
+    } catch (error) {
+      console.error('[OpenAICompatibleService:validateApiKey] 验证异常:', error)
       return false
     }
   }

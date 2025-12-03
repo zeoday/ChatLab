@@ -269,10 +269,7 @@ export class Agent {
    * @param userMessage 用户消息
    * @param onChunk 流式回调
    */
-  async executeStream(
-    userMessage: string,
-    onChunk: (chunk: AgentStreamChunk) => void
-  ): Promise<AgentResult> {
+  async executeStream(userMessage: string, onChunk: (chunk: AgentStreamChunk) => void): Promise<AgentResult> {
     aiLogger.info('Agent', '开始流式执行', { userMessage: userMessage.slice(0, 100) })
 
     // 初始化消息
@@ -446,10 +443,7 @@ export class Agent {
   /**
    * 处理工具调用
    */
-  private async handleToolCalls(
-    toolCalls: ToolCall[],
-    onChunk?: (chunk: AgentStreamChunk) => void
-  ): Promise<void> {
+  private async handleToolCalls(toolCalls: ToolCall[], onChunk?: (chunk: AgentStreamChunk) => void): Promise<void> {
     aiLogger.info('Agent', '处理工具调用', {
       tools: toolCalls.map((tc) => tc.function.name),
     })
@@ -490,9 +484,7 @@ export class Agent {
       aiLogger.info('Agent', '工具执行结果', {
         tool: tc.function.name,
         success: result.success,
-        resultLength: result.success
-          ? JSON.stringify(result.result).length
-          : result.error?.length,
+        resultLength: result.success ? JSON.stringify(result.result).length : result.error?.length,
       })
     }
   }
@@ -501,11 +493,7 @@ export class Agent {
 /**
  * 创建 Agent 并执行对话（便捷函数）
  */
-export async function runAgent(
-  userMessage: string,
-  context: ToolContext,
-  config?: AgentConfig
-): Promise<AgentResult> {
+export async function runAgent(userMessage: string, context: ToolContext, config?: AgentConfig): Promise<AgentResult> {
   const agent = new Agent(context, config)
   return agent.execute(userMessage)
 }
@@ -522,4 +510,3 @@ export async function runAgentStream(
   const agent = new Agent(context, config)
   return agent.executeStream(userMessage, onChunk)
 }
-

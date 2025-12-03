@@ -197,6 +197,7 @@ interface LlmApi {
     model?: string
     baseUrl?: string
     maxTokens?: number
+    disableThinking?: boolean
   }) => Promise<{ success: boolean; config?: AIServiceConfigDisplay; error?: string }>
   updateConfig: (
     id: string,
@@ -207,13 +208,14 @@ interface LlmApi {
       model?: string
       baseUrl?: string
       maxTokens?: number
+      disableThinking?: boolean
     }
   ) => Promise<{ success: boolean; error?: string }>
   deleteConfig: (id?: string) => Promise<{ success: boolean; error?: string }>
   setActiveConfig: (id: string) => Promise<{ success: boolean; error?: string }>
 
   // 验证和检查
-  validateApiKey: (provider: string, apiKey: string, baseUrl?: string) => Promise<boolean>
+  validateApiKey: (provider: string, apiKey: string, baseUrl?: string, model?: string) => Promise<boolean>
   hasConfig: () => Promise<boolean>
 
   // 兼容旧 API（deprecated）

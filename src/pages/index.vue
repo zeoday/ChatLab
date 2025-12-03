@@ -113,7 +113,7 @@ function getProgressDetail(): string {
 <template>
   <div class="relative flex h-full w-full overflow-hidden bg-white dark:bg-gray-950">
     <!-- Content Container -->
-    <div class="relative z-10 flex h-full w-full flex-col items-center justify-center px-4">
+    <div class="relative flex h-full w-full flex-col items-center justify-center px-4">
       <!-- Hero Section -->
       <div class="mb-12 text-center">
         <h1

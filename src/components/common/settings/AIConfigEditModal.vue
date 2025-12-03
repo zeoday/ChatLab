@@ -81,30 +81,30 @@ const modelOptions = computed(() => {
 })
 
 const canSave = computed(() => {
-  const { name, provider, apiKey, baseUrl, model } = formData.value
+  const { provider, apiKey, baseUrl, model } = formData.value
 
   if (props.mode === 'add') {
     switch (configType.value) {
       case 'preset':
-        // 预设服务：需要名称、提供商、API Key
-        return name.trim() && provider && apiKey.trim()
+        // 预设服务：需要提供商、API Key（名称选填）
+        return provider && apiKey.trim()
       case 'local':
-        // 本地服务：需要名称、端点、模型名
-        return name.trim() && baseUrl.trim() && model.trim()
+        // 本地服务：需要端点、模型名（名称选填）
+        return baseUrl.trim() && model.trim()
       case 'openai-compatible':
-        // OpenAI 兼容：需要名称、端点、API Key、模型名
-        return name.trim() && baseUrl.trim() && apiKey.trim() && model.trim()
+        // OpenAI 兼容：需要端点、API Key、模型名（名称选填）
+        return baseUrl.trim() && apiKey.trim() && model.trim()
     }
   }
 
   // 编辑模式
   if (formData.value.provider === 'openai-compatible') {
     if (configType.value === 'local') {
-      return name.trim() && baseUrl.trim() && model.trim()
+      return baseUrl.trim() && model.trim()
     }
-    return name.trim() && baseUrl.trim() && model.trim()
+    return baseUrl.trim() && model.trim()
   }
-  return name.trim() && provider
+  return provider
 })
 
 const modalTitle = computed(() => (props.mode === 'add' ? '添加新配置' : '编辑配置'))
@@ -200,7 +200,8 @@ async function validateKey() {
     const isValid = await window.llmApi.validateApiKey(
       provider || 'openai-compatible',
       testApiKey,
-      baseUrl || undefined
+      baseUrl || undefined,
+      formData.value.model || undefined
     )
     validationResult.value = isValid ? 'valid' : 'invalid'
     validationMessage.value = isValid ? '连接验证成功' : '连接验证失败，但仍可保存'
@@ -209,6 +210,31 @@ async function validateKey() {
     validationMessage.value = '验证失败：' + String(error)
   } finally {
     isValidating.value = false
+  }
+}
+
+/**
+ * 生成默认配置名称
+ */
+function getDefaultName(): string {
+  switch (configType.value) {
+    case 'preset': {
+      // 使用服务商名称
+      const provider = props.providers.find((p) => p.id === formData.value.provider)
+      return provider?.name || formData.value.provider
+    }
+    case 'local':
+    case 'openai-compatible': {
+      // 使用 API 端点（简化显示）
+      try {
+        const url = new URL(formData.value.baseUrl)
+        return url.hostname
+      } catch {
+        return formData.value.baseUrl || '自定义服务'
+      }
+    }
+    default:
+      return '未命名配置'
   }
 }
 
@@ -226,9 +252,12 @@ async function saveConfig() {
       finalApiKey = 'sk-no-key-required'
     }
 
+    // 确定名称（如果未填写则自动生成）
+    const finalName = formData.value.name.trim() || getDefaultName()
+
     if (props.mode === 'add') {
       const result = await window.llmApi.addConfig({
-        name: formData.value.name.trim(),
+        name: finalName,
         provider: finalProvider,
         apiKey: finalApiKey,
         model: formData.value.model.trim() || undefined,
@@ -245,7 +274,7 @@ async function saveConfig() {
       }
     } else {
       const updates: Record<string, unknown> = {
-        name: formData.value.name.trim(),
+        name: finalName,
         provider: finalProvider,
         model: formData.value.model.trim() || undefined,
         baseUrl: formData.value.baseUrl.trim() || undefined,
@@ -415,18 +444,15 @@ watch(
         </div>
 
         <div class="space-y-4">
-          <!-- 配置名称 -->
+          <!-- 配置名称（选填） -->
           <div>
-            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">配置名称</label>
+            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              配置名称
+              <span class="font-normal text-gray-400">（选填）</span>
+            </label>
             <UInput
               v-model="formData.name"
-              :placeholder="
-                configType === 'preset'
-                  ? '如：DeepSeek 主力'
-                  : configType === 'local'
-                    ? '如：本地 Ollama'
-                    : '如：自建 API'
-              "
+              :placeholder="configType === 'preset' ? '留空将使用服务商名称' : '留空将使用 API 端点地址'"
             />
           </div>
 
@@ -435,12 +461,12 @@ watch(
             <!-- 服务商选择 -->
             <div>
               <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">AI 服务商</label>
-              <USelect
+              <UTabs
                 v-model="formData.provider"
                 :items="presetProviders.map((p) => ({ label: p.name, value: p.id }))"
-                placeholder="选择服务商"
+                class="w-full"
               />
-              <p v-if="currentProvider" class="mt-1 text-xs text-gray-500">
+              <p v-if="currentProvider" class="mt-2 text-xs text-gray-500">
                 {{ currentProvider.description }}
               </p>
             </div>
@@ -487,7 +513,7 @@ watch(
             <!-- 模型选择 -->
             <div>
               <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">模型</label>
-              <USelect v-model="formData.model" :items="modelOptions" placeholder="选择模型" />
+              <UTabs v-model="formData.model" :items="modelOptions" placeholder="选择模型" />
             </div>
           </template>
 

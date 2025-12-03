@@ -27,8 +27,56 @@ import { aiLogger } from '../logger'
 // 导出类型
 export * from './types'
 
+// ==================== 新增提供商信息 ====================
+
+/** MiniMax 提供商信息 */
+const MINIMAX_INFO: ProviderInfo = {
+  id: 'minimax',
+  name: 'MiniMax',
+  description: 'MiniMax 大语言模型，支持多模态和长上下文',
+  defaultBaseUrl: 'https://api.minimaxi.com/v1',
+  models: [
+    { id: 'MiniMax-M2', name: 'MiniMax-M2', description: '旗舰模型' },
+    { id: 'MiniMax-M2-Stable', name: 'MiniMax-M2-Stable', description: '稳定版本' },
+  ],
+}
+
+/** 智谱 GLM 提供商信息 */
+const GLM_INFO: ProviderInfo = {
+  id: 'glm',
+  name: 'GLM',
+  description: '智谱 AI 大语言模型，ChatGLM 系列',
+  defaultBaseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+  models: [
+    { id: 'glm-4-plus', name: 'GLM-4-Plus', description: '旗舰模型，效果最佳' },
+    { id: 'glm-4-flash', name: 'GLM-4-Flash', description: '高速模型，性价比高' },
+    { id: 'glm-4', name: 'GLM-4', description: '标准模型' },
+    { id: 'glm-4v-plus', name: 'GLM-4V-Plus', description: '多模态视觉模型' },
+  ],
+}
+
+/** Kimi (月之暗面 Moonshot) 提供商信息 */
+const KIMI_INFO: ProviderInfo = {
+  id: 'kimi',
+  name: 'Kimi',
+  description: 'Moonshot AI 大语言模型，支持超长上下文',
+  defaultBaseUrl: 'https://api.moonshot.cn/v1',
+  models: [
+    { id: 'moonshot-v1-8k', name: 'Moonshot-V1-8K', description: '8K 上下文' },
+    { id: 'moonshot-v1-32k', name: 'Moonshot-V1-32K', description: '32K 上下文' },
+    { id: 'moonshot-v1-128k', name: 'Moonshot-V1-128K', description: '128K 超长上下文' },
+  ],
+}
+
 // 所有支持的提供商信息
-export const PROVIDERS: ProviderInfo[] = [DEEPSEEK_INFO, QWEN_INFO, OPENAI_COMPATIBLE_INFO]
+export const PROVIDERS: ProviderInfo[] = [
+  DEEPSEEK_INFO,
+  QWEN_INFO,
+  MINIMAX_INFO,
+  GLM_INFO,
+  KIMI_INFO,
+  OPENAI_COMPATIBLE_INFO,
+]
 
 // 配置文件路径
 let CONFIG_PATH: string | null = null
@@ -318,11 +366,20 @@ interface ExtendedLLMConfig extends LLMConfig {
  * 创建 LLM 服务实例
  */
 export function createLLMService(config: ExtendedLLMConfig): ILLMService {
+  // 获取提供商的默认 baseUrl
+  const providerInfo = getProviderInfo(config.provider)
+  const baseUrl = config.baseUrl || providerInfo?.defaultBaseUrl
+
   switch (config.provider) {
     case 'deepseek':
       return new DeepSeekService(config.apiKey, config.model, config.baseUrl)
     case 'qwen':
       return new QwenService(config.apiKey, config.model, config.baseUrl)
+    // 新增的云端服务都使用 OpenAI 兼容格式
+    case 'minimax':
+    case 'glm':
+    case 'kimi':
+      return new OpenAICompatibleService(config.apiKey, config.model, baseUrl)
     case 'openai-compatible':
       return new OpenAICompatibleService(config.apiKey, config.model, config.baseUrl, config.disableThinking)
     default:
