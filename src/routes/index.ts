@@ -20,7 +20,7 @@ export const router = createRouter({
     {
       path: '/tools',
       name: 'tools',
-      component: () => import('@/pages/tools.vue'),
+      component: () => import('@/pages/tools/index.vue'),
     },
   ],
   history: createWebHashHistory(),

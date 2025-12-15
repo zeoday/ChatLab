@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { SubTabs } from '@/components/UI'
-import MergeTab from '@/components/tools/MergeTab.vue'
+import MergeTab from './components/MergeTab.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 
 // Tab 配置
