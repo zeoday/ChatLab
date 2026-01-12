@@ -3,6 +3,7 @@ import { onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import TitleBar from '@/components/common/TitleBar.vue'
 import Sidebar from '@/components/common/Sidebar.vue'
 import SettingModal from '@/components/common/SettingModal.vue'
 import ScreenCaptureModal from '@/components/common/ScreenCaptureModal.vue'
@@ -36,7 +37,8 @@ onMounted(async () => {
 
 <template>
   <UApp :tooltip="tooltip">
-    <div class="flex h-screen w-full overflow-hidden bg-white dark:bg-gray-950">
+    <!-- 自定义标题栏 - 拖拽区域 + 窗口控制按钮 -->
+    <TitleBar />
     <div class="relative flex h-screen w-full overflow-hidden bg-gray-50 dark:bg-gray-900">
       <!-- 主内容区域 -->
       <template v-if="!isInitialized">

@@ -244,7 +244,6 @@ watch([activeTab, selectedYear], ([newTab, newYear]) => {
 
 onMounted(() => {
   syncSession()
-  // loadData is triggered by currentSessionId watch
 })
 </script>
 

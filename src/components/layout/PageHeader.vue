@@ -13,7 +13,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="border-b border-gray-200/50 px-6 pb-2 dark:border-gray-800/50">
+  <div class="border-b border-gray-200/50 px-6 pb-2 dark:border-gray-800/50" style="-webkit-app-region: drag">
     <!-- 标题区域 -->
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -36,7 +36,7 @@ defineProps<{
         </div>
       </div>
       <!-- 右侧操作区域 -->
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2" style="-webkit-app-region: no-drag">
         <slot name="actions" />
       </div>
     </div>

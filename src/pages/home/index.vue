@@ -29,7 +29,12 @@ const features = computed(() => [
     <div class="relative h-full w-full overflow-y-auto">
       <div class="flex min-h-full w-full flex-col items-center justify-center px-4 py-12">
         <!-- Hero Section -->
-        <div class="xl:mb-6 mb-4 text-center">
+        <div class="relative xl:mb-6 mb-4 text-center">
+          <!-- Draggable Area above title -->
+          <div
+            class="absolute -top-24 left-1/2 h-24 w-full max-w-3xl -translate-x-1/2"
+            style="-webkit-app-region: drag"
+          />
           <!-- Title -->
           <h1 class="mb-4 text-6xl sm:text-7xl lg:text-8xl font-black tracking-tight text-pink-500">
             {{ t('home.title') }}

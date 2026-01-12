@@ -102,7 +102,8 @@ class MainProcess {
 
   // 创建主窗口
   async createWindow() {
-    this.mainWindow = new BrowserWindow({
+    // 平台差异化窗口配置
+    const windowOptions: Electron.BrowserWindowConstructorOptions = {
       width: 1180,
       height: 752,
       minWidth: 1180,
@@ -114,7 +115,17 @@ class MainProcess {
         sandbox: false,
         devTools: true,
       },
-    })
+    }
+
+    // macOS: 使用 hiddenInset 保留红绿灯按钮
+    // Windows/Linux: 完全移除系统标题栏
+    if (platform.isMacOS) {
+      windowOptions.titleBarStyle = 'hiddenInset'
+    } else {
+      windowOptions.frame = false
+    }
+
+    this.mainWindow = new BrowserWindow(windowOptions)
 
     this.mainWindow.once('ready-to-show', () => {
       this.mainWindow?.show()

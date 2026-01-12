@@ -167,16 +167,21 @@ function getSessionAvatarText(session: AnalysisSession): string {
   >
     <div class="flex flex-col p-4 pt-8">
       <!-- Header -->
-      <div class="mb-2 flex items-center" :class="[isCollapsed ? 'justify-center' : 'justify-between']">
-        <div v-if="!isCollapsed" class="flex items-baseline ml-2">
+      <div
+        class="mb-2 flex items-center"
+        :class="[isCollapsed ? 'justify-center' : 'justify-between']"
+        style="-webkit-app-region: drag"
+      >
+        <div v-if="!isCollapsed" class="ml-2 flex items-baseline">
           <div class="text-2xl font-black tracking-tight text-pink-500">
             {{ t('sidebar.brand') }}
           </div>
-          <span class="text-xs text-gray-400 ml-2">v{{ version }}</span>
+          <span class="ml-2 text-xs text-gray-400">v{{ version }}</span>
         </div>
         <UTooltip
           :text="isCollapsed ? t('sidebar.tooltip.expand') : t('sidebar.tooltip.collapse')"
           :popper="{ placement: 'right' }"
+          style="-webkit-app-region: no-drag"
         >
           <UButton
             icon="i-heroicons-bars-3"
